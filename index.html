@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anatomy Quiz: Heart & Lungs</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f2f2f2;
+      padding: 30px;
+      margin: 0;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .container {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 40px;
+      flex-wrap: wrap;
+    }
+    .diagram-side {
+      flex: 1 1 500px;
+      text-align: center;
+    }
+    .controls-side {
+      flex: 1 1 350px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    img {
+      width: 100%;
+      max-width: 500px;
+      height: auto;
+      margin-bottom: 15px;
+    }
+    select, input {
+      padding: 10px;
+      font-size: 1em;
+      margin: 5px 0;
+      width: 100%;
+      max-width: 250px;
+    }
+    .question {
+      margin-top: 20px;
+      font-size: 1.2em;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 10px 5px;
+      font-size: 1em;
+      cursor: pointer;
+    }
+    .result, .score {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    #celebration {
+      color: green;
+      font-size: 1.4em;
+      margin-top: 20px;
+      display: none;
+    }
+    .review-list {
+      margin-top: 20px;
+      font-size: 0.95em;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <h1>Anatomy Quiz: Heart & Lungs</h1>
+  <div class="container">
+    <div class="diagram-side">
+      <img id="diagram-main" src="https://i.postimg.cc/VvNQ27cg/Screenshot-2025-04-05-231749.png" alt="Heart Diagram">
+      <img id="diagram-extra" src="https://i.postimg.cc/bN0tNX3C/Screenshot-2025-04-06-002749.png" alt="Icons Diagram">
+    </div>
+    <div class="controls-side">
+      <label for="system-select">Choose System:</label>
+      <select id="system-select" onchange="switchSystem()">
+        <option value="heart">Heart</option>
+        <option value="lungs">Lungs</option>
+      </select>
+
+      <label for="label-select">Choose Number:</label>
+      <select id="label-select" onchange="updateLabel()"></select>
+
+      <div class="question">What is <span id="label-number">1</span>?</div>
+      <input id="answer-en" type="text" placeholder="English Answer...">
+      <input id="answer-pt" type="text" placeholder="Portuguese Answer...">
+
+      <div>
+        <button onclick="checkAnswer()">Check</button>
+        <button onclick="nextLabel()">Next</button>
+        <button onclick="resetQuiz()">Reset</button>
+        <button onclick="showReview()">Review All</button>
+      </div>
+
+      <div class="result" id="result"></div>
+      <div class="score" id="score"></div>
+      <div id="celebration">🎉 Perfect Score! You're a master of this system! 🎉</div>
+      <div class="review-list" id="review"></div>
+    </div>
+  </div>
+
+  <script>
+    const heartLabels = {
+      1: ["superior vena cava", "veia cava superior"],
+      2: ["pulmonary valve", "válvula pulmonar"],
+      3: ["right atrium", "átrio direito"],
+      4: ["tricuspid valve", "válvula tricúspide"],
+      5: ["right ventricle", "ventrículo direito"],
+      6: ["inferior vena cava", "veia cava inferior"],
+      7: ["aorta", "aorta"],
+      8: ["pulmonary artery", "artéria pulmonar"],
+      9: ["pulmonary veins", "veias pulmonares"],
+      10: ["left atrium", "átrio esquerdo"],
+      11: ["mitral valve", "válvula mitral"],
+      12: ["left ventricle", "ventrículo esquerdo"],
+      13: ["myocardium", "miocárdio"],
+      14: ["descending aorta", "aorta descendente"],
+      15: ["aortic valve", "válvula aórtica"],
+      16: ["pericardium", "pericárdio"],
+      17: ["septum", "septo cardíaco"],
+      18: ["blood clot", "coágulo sanguíneo"],
+      19: ["blood work", "análise sanguínea"]
+    };
+
+    const lungLabels = {
+      1: ["nasal cavity", "cavidade nasal"],
+      2: ["pharynx", "faringe"],
+      3: ["larynx", "laringe"],
+      4: ["trachea", "traqueia"],
+      5: ["right lung", "pulmão direito"],
+      6: ["alveoli", "alvéolos"],
+      7: ["left lung", "pulmão esquerdo"],
+      8: ["bronchioles", "bronquíolos"],
+      9: ["rib", "costela"],
+      10: ["diaphragm", "diafragma"],
+      11: ["bronchi", "brônquios"],
+      12: ["pleura", "pleura"],
+      13: ["sinuses", "seios nasais"],
+      14: ["inhale", "inspirar"],
+      15: ["exhale", "expirar"],
+      16: ["pulmonary function test", "teste de função pulmonar"]
+    };
+
+    let currentSystem = "heart";
+    let currentLabel = 1;
+    let correctEN = 0;
+    let correctPT = 0;
+    let reviewAnswers = [];
+    let scoreTracker = new Set();
+
+    function getLabels() {
+      return currentSystem === "heart" ? heartLabels : lungLabels;
+    }
+
+    function populateLabelDropdown() {
+      const labelSelect = document.getElementById("label-select");
+      labelSelect.innerHTML = "";
+      const labels = getLabels();
+      Object.keys(labels).forEach((key) => {
+        const option = document.createElement("option");
+        option.value = key;
+        option.text = key;
+        labelSelect.appendChild(option);
+      });
+      labelSelect.value = 1;
+      currentLabel = 1;
+      updateLabel();
+    }
+
+    function updateLabel() {
+      const labelSelect = document.getElementById("label-select");
+      currentLabel = parseInt(labelSelect.value);
+      document.getElementById("label-number").textContent = currentLabel;
+      document.getElementById("answer-en").value = "";
+      document.getElementById("answer-pt").value = "";
+      document.getElementById("result").textContent = "";
+    }
+
+    function checkAnswer() {
+      const en = document.getElementById("answer-en").value.trim().toLowerCase();
+      const pt = document.getElementById("answer-pt").value.trim().toLowerCase();
+      const [correctEn, correctPt] = getLabels()[currentLabel];
+
+      let newAttempt = !scoreTracker.has(currentSystem + currentLabel);
+      if (newAttempt) scoreTracker.add(currentSystem + currentLabel);
+
+      const enCorrect = en === correctEn;
+      const ptCorrect = pt === correctPt;
+      if (enCorrect && newAttempt) correctEN++;
+      if (ptCorrect && newAttempt) correctPT++;
+
+      reviewAnswers.push({ label: currentLabel, correctEn, correctPt, en, pt, enCorrect, ptCorrect });
+
+      let result = "";
+      if (enCorrect && ptCorrect) {
+        result = "✅ Both answers correct!";
+        document.getElementById("result").style.color = "green";
+      } else {
+        result = "❌ ";
+        if (!enCorrect) result += `EN: "${en}" → "${correctEn}". `;
+        if (!ptCorrect) result += `PT: "${pt}" → "${correctPt}".`;
+        document.getElementById("result").style.color = "red";
+      }
+      document.getElementById("result").textContent = result;
+      updateScore();
+    }
+
+    function updateScore() {
+      const total = Object.keys(getLabels()).length;
+      document.getElementById("score").textContent = `Score: EN ${correctEN}/${scoreTracker.size}, PT ${correctPT}/${scoreTracker.size} (Total Labels: ${total})`;
+      document.getElementById("celebration").style.display = (correctEN === total && correctPT === total) ? "block" : "none";
+    }
+
+    function nextLabel() {
+      const keys = Object.keys(getLabels()).map(Number);
+      const idx = keys.indexOf(currentLabel);
+      currentLabel = keys[(idx + 1) % keys.length];
+      document.getElementById("label-select").value = currentLabel;
+      updateLabel();
+    }
+
+    function resetQuiz() {
+      correctEN = 0;
+      correctPT = 0;
+      scoreTracker.clear();
+      reviewAnswers = [];
+      currentLabel = 1;
+      document.getElementById("celebration").style.display = "none";
+      populateLabelDropdown();
+      document.getElementById("score").textContent = "";
+      document.getElementById("review").innerHTML = "";
+    }
+
+    function showReview() {
+      const reviewDiv = document.getElementById("review");
+      reviewDiv.innerHTML = `<h3>Review:</h3>`;
+      reviewAnswers.forEach(r => {
+        reviewDiv.innerHTML += `<div style='color:${r.enCorrect && r.ptCorrect ? 'green' : 'red'}'>[${r.label}] EN: "${r.en}" → "${r.correctEn}" | PT: "${r.pt}" → "${r.correctPt}"</div>`;
+      });
+    }
+
+    function switchSystem() {
+      currentSystem = document.getElementById("system-select").value;
+      document.getElementById("diagram-main").src = currentSystem === "heart" ? "https://i.postimg.cc/VvNQ27cg/Screenshot-2025-04-05-231749.png" : "https://i.postimg.cc/903VwP3Y/Screenshot-2025-04-05-232010.png";
+      document.getElementById("diagram-extra").style.display = currentSystem === "heart" ? "block" : "none";
+      resetQuiz();
+    }
+
+    window.onload = populateLabelDropdown;
+  </script>
+</body>
+</html>
